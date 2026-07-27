@@ -27,6 +27,8 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { doc, setDoc, onSnapshot } from "firebase/firestore";
+import { db } from "./firebase.js";
 
 /* ------------------------------------------------------------------ */
 /* THEME                                                               */
@@ -194,37 +196,51 @@ function daysAgo(n) {
 }
 
 /* ------------------------------------------------------------------ */
-/* PERSISTENT STORAGE HOOK                                             */
+/* PERSISTENT STORAGE HOOK (Firestore — synced across devices)         */
 /* ------------------------------------------------------------------ */
-const STORAGE_PREFIX = "gym-tracker:";
+const COLLECTION = "gymtracker";
 
 function useStoredState(key, initial) {
-  const fullKey = STORAGE_PREFIX + key;
-  const [value, setValue] = useState(() => {
-    try {
-      const raw = localStorage.getItem(fullKey);
-      return raw != null ? JSON.parse(raw) : initial;
-    } catch (e) {
-      return initial;
-    }
-  });
+  const [value, setValue] = useState(initial);
+  const [loaded, setLoaded] = useState(false);
+  const valueRef = useRef(initial);
+
+  useEffect(() => {
+    const ref = doc(db, COLLECTION, key);
+    const unsub = onSnapshot(
+      ref,
+      (snap) => {
+        if (snap.exists()) {
+          const data = snap.data().value;
+          valueRef.current = data;
+          setValue(data);
+        } else {
+          setDoc(ref, { value: initial }).catch((e) => console.error("Firestore init failed", e));
+        }
+        setLoaded(true);
+      },
+      (err) => {
+        console.error("Firestore sync error", err);
+        setLoaded(true);
+      }
+    );
+    return () => unsub();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
 
   const persist = useCallback(
     (updater) => {
-      setValue((prev) => {
-        const next = typeof updater === "function" ? updater(prev) : updater;
-        try {
-          localStorage.setItem(fullKey, JSON.stringify(next));
-        } catch (e) {
-          console.error("localStorage set failed", e);
-        }
-        return next;
+      const next = typeof updater === "function" ? updater(valueRef.current) : updater;
+      valueRef.current = next;
+      setValue(next);
+      setDoc(doc(db, COLLECTION, key), { value: next }).catch((e) => {
+        console.error("Firestore write failed", e);
       });
     },
-    [fullKey]
+    [key]
   );
 
-  return [value, persist, true];
+  return [value, persist, loaded];
 }
 
 /* ------------------------------------------------------------------ */
