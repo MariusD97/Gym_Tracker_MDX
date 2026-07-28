@@ -17,6 +17,7 @@ import {
   Minus,
   Pencil,
   Flame,
+  Scale,
 } from "lucide-react";
 import {
   LineChart,
@@ -254,6 +255,7 @@ function Card({ children, style, onClick, className = "" }) {
       style={{
         background: C.surface,
         border: `1px solid ${C.border}`,
+        boxShadow: "0 1px 2px rgba(0,0,0,0.4), 0 8px 24px -12px rgba(0,0,0,0.6)",
         ...style,
       }}
     >
@@ -272,6 +274,7 @@ function PrimaryButton({ children, onClick, style, disabled }) {
         background: disabled ? C.surface3 : C.accent,
         color: disabled ? C.sub2 : "#0A0A0B",
         opacity: disabled ? 0.6 : 1,
+        boxShadow: disabled ? "none" : "0 6px 24px -6px rgba(198,255,61,0.55)",
         ...style,
       }}
     >
@@ -440,22 +443,36 @@ function ActivityRing({ progress, size = 84, stroke = 10 }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const pct = Math.min(1, progress);
+  const percentLabel = Math.round(pct * 100);
   return (
-    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={C.surface3} strokeWidth={stroke} />
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={r}
-        fill="none"
-        stroke={C.accent}
-        strokeWidth={stroke}
-        strokeDasharray={c}
-        strokeDashoffset={c * (1 - pct)}
-        strokeLinecap="round"
-        style={{ transition: "stroke-dashoffset 0.6s ease" }}
-      />
-    </svg>
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={C.surface3} strokeWidth={stroke} />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={C.accent}
+          strokeWidth={stroke}
+          strokeDasharray={c}
+          strokeDashoffset={c * (1 - pct)}
+          strokeLinecap="round"
+          style={{ transition: "stroke-dashoffset 0.6s ease" }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span
+          className="font-bold leading-none"
+          style={{ fontSize: size * 0.28, color: percentLabel >= 100 ? C.accent : C.text }}
+        >
+          {percentLabel}
+        </span>
+        <span className="font-semibold leading-none" style={{ fontSize: size * 0.14, color: C.sub2, marginTop: 2 }}>
+          %
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -949,7 +966,16 @@ function BottomNav({ tab, setTab }) {
             className="flex flex-col items-center gap-1 transition active:scale-90"
             style={{ minWidth: 56 }}
           >
-            <Icon size={22} color={active ? C.accent : C.sub2} strokeWidth={active ? 2.4 : 2} />
+            <span
+              className="flex items-center justify-center rounded-full transition-all"
+              style={{
+                width: 44,
+                height: 28,
+                background: active ? C.accentSoft : "transparent",
+              }}
+            >
+              <Icon size={22} color={active ? C.accent : C.sub2} strokeWidth={active ? 2.4 : 2} />
+            </span>
             <span className="text-xs font-medium" style={{ color: active ? C.accent : C.sub2 }}>
               {it.label}
             </span>
@@ -985,10 +1011,11 @@ function HomeView({ weekCount, goal, monthCount, lastWorkout, exById, currentBod
       </Card>
 
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <StatTile label="Workout-uri lunare" value={monthCount} onClick={onOpenCalendar} />
+        <StatTile label="Workout-uri lunare" value={monthCount} onClick={onOpenCalendar} icon={CalendarDays} />
         <StatTile
           label="Greutate corporală"
           value={currentBodyweight ? `${currentBodyweight.weight} kg` : "-"}
+          icon={Scale}
         />
       </div>
 
@@ -1022,11 +1049,21 @@ function HomeView({ weekCount, goal, monthCount, lastWorkout, exById, currentBod
   );
 }
 
-function StatTile({ label, value, onClick }) {
+function StatTile({ label, value, onClick, icon: Icon }) {
   return (
     <Card style={{ padding: 16 }} onClick={onClick} className={onClick ? "active:scale-95 transition" : ""}>
-      <div className="text-xs font-medium mb-1.5" style={{ color: C.sub }}>
-        {label}
+      <div className="flex items-center gap-1.5 mb-1.5">
+        {Icon && (
+          <span
+            className="flex items-center justify-center rounded-lg shrink-0"
+            style={{ width: 22, height: 22, background: C.accentSoft }}
+          >
+            <Icon size={13} color={C.accent} strokeWidth={2.4} />
+          </span>
+        )}
+        <div className="text-xs font-medium" style={{ color: C.sub }}>
+          {label}
+        </div>
       </div>
       <div className="text-xl font-bold">{value}</div>
     </Card>
@@ -1347,7 +1384,7 @@ function ExerciseLogCard({ exercise, sets, workouts, onChange, onCopyLast, onRem
             <div className="font-semibold text-base">{exercise.name}</div>
             {hasFilled && (
               <span
-                className="rounded-full flex items-center justify-center shrink-0"
+                className="rounded-full flex items-center justify-center shrink-0 v0-pop"
                 style={{ width: 16, height: 16, background: C.accent }}
               >
                 <Check size={10} color="#0A0A0B" strokeWidth={3} />
@@ -1640,8 +1677,8 @@ function ExerciseDetail({ exercise, workouts, onBack }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <StatTile label="Greutate maximă" value={rec ? `${rec.maxWeight} kg` : "-"} />
-        <StatTile label="Volum total" value={`${Math.round(totalVolume).toLocaleString()} kg`} />
+        <StatTile label="Greutate maximă" value={rec ? `${rec.maxWeight} kg` : "-"} icon={Dumbbell} />
+        <StatTile label="Volum total" value={`${Math.round(totalVolume).toLocaleString()} kg`} icon={TrendingUp} />
       </div>
 
       <div className="flex gap-2 mb-3 overflow-x-auto">
