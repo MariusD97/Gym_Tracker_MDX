@@ -535,6 +535,7 @@ export default function App() {
   const [activeWorkout, setActiveWorkout] = useState(null);
   const [completionSummary, setCompletionSummary] = useState(null);
   const [pickerOpen, setPickerOpen] = useState(false); // day type picker sheet
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const ready = exLoaded && tLoaded && wLoaded && bLoaded && sLoaded;
 
@@ -784,6 +785,13 @@ export default function App() {
             exById={exById}
             currentBodyweight={currentBodyweight}
             onStart={() => setPickerOpen(true)}
+            onOpenCalendar={() => setCalendarOpen(true)}
+            onOpenLastWorkout={() => {
+              if (lastWorkout) {
+                setDetail({ type: "workout", id: lastWorkout.id });
+                setTab("history");
+              }
+            }}
           />
         )}
 
@@ -893,6 +901,19 @@ export default function App() {
           }}
         />
       )}
+
+      {calendarOpen && (
+        <CalendarView
+          workouts={workouts}
+          initialDate={new Date()}
+          onClose={() => setCalendarOpen(false)}
+          onSelectWorkout={(id) => {
+            setCalendarOpen(false);
+            setDetail({ type: "workout", id });
+            setTab("history");
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -942,13 +963,13 @@ function BottomNav({ tab, setTab }) {
 /* ------------------------------------------------------------------ */
 /* HOME VIEW                                                           */
 /* ------------------------------------------------------------------ */
-function HomeView({ weekCount, goal, monthCount, lastWorkout, exById, currentBodyweight, onStart }) {
+function HomeView({ weekCount, goal, monthCount, lastWorkout, exById, currentBodyweight, onStart, onOpenCalendar, onOpenLastWorkout }) {
   const pct = goal > 0 ? weekCount / goal : 0;
   return (
     <div className="px-4 pt-5">
       <div className="text-2xl font-bold mb-5 px-1">Gym Tracker</div>
 
-      <Card style={{ padding: 18 }} className="mb-4">
+      <Card style={{ padding: 18 }} className="mb-4 active:scale-95 transition" onClick={onOpenCalendar}>
         <div className="flex items-center gap-4">
           <ActivityRing progress={pct} />
           <div className="flex-1">
@@ -964,14 +985,14 @@ function HomeView({ weekCount, goal, monthCount, lastWorkout, exById, currentBod
       </Card>
 
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <StatTile label="Workout-uri lunare" value={monthCount} />
+        <StatTile label="Workout-uri lunare" value={monthCount} onClick={onOpenCalendar} />
         <StatTile
           label="Greutate corporală"
           value={currentBodyweight ? `${currentBodyweight.weight} kg` : "-"}
         />
       </div>
 
-      <Card style={{ padding: 16 }} className="mb-6">
+      <Card style={{ padding: 16 }} className="mb-6 active:scale-95 transition" onClick={lastWorkout ? onOpenLastWorkout : undefined}>
         <div className="text-sm font-medium mb-1" style={{ color: C.sub }}>
           Ultimul antrenament
         </div>
@@ -1001,14 +1022,120 @@ function HomeView({ weekCount, goal, monthCount, lastWorkout, exById, currentBod
   );
 }
 
-function StatTile({ label, value }) {
+function StatTile({ label, value, onClick }) {
   return (
-    <Card style={{ padding: 16 }}>
+    <Card style={{ padding: 16 }} onClick={onClick} className={onClick ? "active:scale-95 transition" : ""}>
       <div className="text-xs font-medium mb-1.5" style={{ color: C.sub }}>
         {label}
       </div>
       <div className="text-xl font-bold">{value}</div>
     </Card>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* CALENDAR VIEW                                                       */
+/* ------------------------------------------------------------------ */
+const WEEKDAY_LABELS = ["Lu", "Ma", "Mi", "Jo", "Vi", "Sâ", "Du"];
+const MONTH_LABELS_RO = [
+  "Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie",
+  "Iulie", "August", "Septembrie", "Octombrie", "Noiembrie", "Decembrie",
+];
+
+function CalendarView({ workouts, initialDate, onSelectWorkout, onClose }) {
+  const [cursor, setCursor] = useState(() => new Date(initialDate.getFullYear(), initialDate.getMonth(), 1));
+
+  const year = cursor.getFullYear();
+  const month = cursor.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstWeekday = (new Date(year, month, 1).getDay() + 6) % 7; // Monday = 0
+
+  const workoutsByDay = useMemo(() => {
+    const map = {};
+    for (const w of workouts) {
+      const d = new Date(w.date + "T00:00:00");
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        const day = d.getDate();
+        if (!map[day]) map[day] = [];
+        map[day].push(w);
+      }
+    }
+    return map;
+  }, [workouts, year, month]);
+
+  const monthCount = Object.keys(workoutsByDay).length;
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+
+  const cells = [];
+  for (let i = 0; i < firstWeekday; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  function goMonth(delta) {
+    setCursor((c) => new Date(c.getFullYear(), c.getMonth() + delta, 1));
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: C.bg, paddingTop: "env(safe-area-inset-top, 0px)" }}>
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <button onClick={onClose} className="flex items-center gap-1 text-sm font-medium" style={{ color: C.accent }}>
+          <ChevronLeft size={16} /> Înapoi
+        </button>
+        <div className="text-sm font-semibold" style={{ color: C.sub }}>
+          {monthCount} antrenamente
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between px-4 py-3">
+        <button onClick={() => goMonth(-1)} className="p-2 rounded-full active:scale-90 transition" style={{ background: C.surface2 }}>
+          <ChevronLeft size={18} color={C.text} />
+        </button>
+        <div className="text-lg font-bold">
+          {MONTH_LABELS_RO[month]} {year}
+        </div>
+        <button onClick={() => goMonth(1)} className="p-2 rounded-full active:scale-90 transition" style={{ background: C.surface2 }}>
+          <ChevronRight size={18} color={C.text} />
+        </button>
+      </div>
+
+      <div className="px-4 flex-1 overflow-y-auto pb-8">
+        <div className="grid grid-cols-7 gap-1 mb-2">
+          {WEEKDAY_LABELS.map((w) => (
+            <div key={w} className="text-center text-xs font-semibold" style={{ color: C.sub2 }}>
+              {w}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1.5">
+          {cells.map((day, i) => {
+            if (day == null) return <div key={`e${i}`} />;
+            const dayWorkouts = workoutsByDay[day];
+            const has = !!dayWorkouts;
+            const isToday = isCurrentMonth && today.getDate() === day;
+            return (
+              <button
+                key={day}
+                onClick={() => has && onSelectWorkout(dayWorkouts[0].id)}
+                className="aspect-square rounded-xl flex flex-col items-center justify-center transition active:scale-90"
+                style={{
+                  background: has ? C.accent : C.surface,
+                  border: isToday ? `2px solid ${C.accent}` : `1px solid ${C.border}`,
+                }}
+              >
+                <span className="text-sm font-semibold" style={{ color: has ? "#0A0A0B" : C.text }}>
+                  {day}
+                </span>
+                {has && dayWorkouts.length > 0 && (
+                  <span className="text-[9px] font-medium" style={{ color: "#0A0A0B", opacity: 0.7 }}>
+                    {dayWorkouts[0].dayType.slice(0, 3)}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 
