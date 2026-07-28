@@ -1895,8 +1895,10 @@ function SettingsView({
   workouts,
   setWorkouts,
 }) {
+  const [screen, setScreen] = useState(null); // null | "plans" | "exercises"
   const [templateEditor, setTemplateEditor] = useState(null); // dayType string
-  const [addExOpen, setAddExOpen] = useState(false);
+  const [exSheetOpen, setExSheetOpen] = useState(false);
+  const [editingEx, setEditingEx] = useState(null);
   const [addBwOpen, setAddBwOpen] = useState(false);
   const [editBw, setEditBw] = useState(null);
   const [confirmReset, setConfirmReset] = useState(false);
@@ -1947,12 +1949,32 @@ function SettingsView({
     setBwDate(todayISO());
   }
 
-  function addExercise() {
-    if (!newExName.trim()) return;
-    const id = newExName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + uid().slice(0, 4);
-    setExercises((prev) => [...prev, { id, name: newExName.trim(), group: newExGroup }]);
+  function openAddExercise() {
+    setEditingEx(null);
     setNewExName("");
-    setAddExOpen(false);
+    setNewExGroup(GROUP_ORDER[0]);
+    setExSheetOpen(true);
+  }
+
+  function openEditExercise(ex) {
+    setEditingEx(ex);
+    setNewExName(ex.name);
+    setNewExGroup(ex.group);
+    setExSheetOpen(true);
+  }
+
+  function saveExercise() {
+    const name = newExName.trim();
+    if (!name) return;
+    if (editingEx) {
+      setExercises((prev) => prev.map((e) => (e.id === editingEx.id ? { ...e, name, group: newExGroup } : e)));
+    } else {
+      const id = name.toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + uid().slice(0, 4);
+      setExercises((prev) => [...prev, { id, name, group: newExGroup }]);
+    }
+    setExSheetOpen(false);
+    setEditingEx(null);
+    setNewExName("");
   }
 
   function deleteExercise(id) {
@@ -1978,6 +2000,219 @@ function SettingsView({
     (g) => g.items.length > 0
   );
 
+  /* ---------------- PLANS SUB-SCREEN ---------------- */
+  if (screen === "plans") {
+    return (
+      <div className="px-4 pt-5 pb-4">
+        <button onClick={() => setScreen(null)} className="flex items-center gap-1 mb-3 text-sm font-medium" style={{ color: C.accent }}>
+          <ChevronLeft size={16} /> Settings
+        </button>
+        <div className="flex items-center justify-between mb-4 px-1">
+          <div className="text-2xl font-bold">Planuri antrenament</div>
+          <button onClick={() => setAddPlanOpen(true)} className="text-xs font-semibold" style={{ color: C.accent }}>
+            + Adaugă
+          </button>
+        </div>
+        <Card style={{ padding: 4 }}>
+          {planNames.map((d, i) => (
+            <div
+              key={d}
+              className="w-full flex items-center justify-between px-3.5 py-3"
+              style={{ borderTop: i > 0 ? `1px solid ${C.border}` : "none" }}
+            >
+              <button className="text-left flex-1" onClick={() => setTemplateEditor(d)}>
+                <div className="text-sm font-semibold">{d}</div>
+                <div className="text-xs" style={{ color: C.sub2 }}>
+                  {templates[d]?.length || 0} exerciții
+                </div>
+              </button>
+              <button onClick={() => setTemplateEditor(d)} className="p-1.5 active:scale-90 transition">
+                <ChevronRight size={16} color={C.sub2} />
+              </button>
+              <button onClick={() => setConfirmDelPlan(d)} className="p-1.5 active:scale-90 transition">
+                <Trash2 size={14} color={C.sub2} />
+              </button>
+            </div>
+          ))}
+          {planNames.length === 0 && (
+            <div className="text-sm text-center py-6" style={{ color: C.sub2 }}>
+              Niciun plan creat
+            </div>
+          )}
+        </Card>
+
+        <BottomSheet open={!!templateEditor} onClose={() => setTemplateEditor(null)} title={templateEditor}>
+          <div className="space-y-4 pb-4">
+            {GROUP_ORDER.map((g) => {
+              const items = exercises.filter((e) => e.group === g);
+              if (items.length === 0) return null;
+              return (
+                <div key={g}>
+                  <div className="text-xs font-medium mb-1.5" style={{ color: C.sub2 }}>
+                    {g}
+                  </div>
+                  <div className="space-y-1.5">
+                    {items.map((e) => {
+                      const checked = templates[templateEditor]?.includes(e.id);
+                      return (
+                        <button
+                          key={e.id}
+                          onClick={() =>
+                            setTemplates((prev) => {
+                              const cur = prev[templateEditor] || [];
+                              const next = checked ? cur.filter((x) => x !== e.id) : [...cur, e.id];
+                              return { ...prev, [templateEditor]: next };
+                            })
+                          }
+                          className="w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 transition active:scale-95"
+                          style={{ background: checked ? C.accentSoft : C.surface2 }}
+                        >
+                          <span className="text-sm font-medium">{e.name}</span>
+                          {checked && <Check size={16} color={C.accent} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </BottomSheet>
+
+        <BottomSheet open={addPlanOpen} onClose={() => setAddPlanOpen(false)} title="Plan nou">
+          <div className="space-y-3 pb-2">
+            <div>
+              <div className="text-xs font-medium mb-1.5" style={{ color: C.sub2 }}>
+                Nume plan
+              </div>
+              <input
+                value={newPlanName}
+                onChange={(e) => setNewPlanName(e.target.value)}
+                placeholder="ex: Full Body"
+                className="w-full rounded-xl px-3.5 py-3 text-sm outline-none"
+                style={{ background: C.surface2, color: C.text, border: `1px solid ${C.border}` }}
+              />
+            </div>
+            <PrimaryButton onClick={addPlan} disabled={!newPlanName.trim() || !!templates[newPlanName.trim()]}>
+              Salvează
+            </PrimaryButton>
+            {newPlanName.trim() && templates[newPlanName.trim()] && (
+              <div className="text-xs text-center" style={{ color: C.danger }}>
+                Există deja un plan cu acest nume.
+              </div>
+            )}
+          </div>
+        </BottomSheet>
+
+        <ConfirmDialog
+          open={!!confirmDelPlan}
+          title="Ștergi planul?"
+          message={confirmDelPlan ? `Planul "${confirmDelPlan}" va fi eliminat. Antrenamentele deja salvate rămân neschimbate.` : ""}
+          onCancel={() => setConfirmDelPlan(null)}
+          onConfirm={() => deletePlan(confirmDelPlan)}
+        />
+      </div>
+    );
+  }
+
+  /* ---------------- EXERCISES SUB-SCREEN ---------------- */
+  if (screen === "exercises") {
+    return (
+      <div className="px-4 pt-5 pb-4">
+        <button onClick={() => setScreen(null)} className="flex items-center gap-1 mb-3 text-sm font-medium" style={{ color: C.accent }}>
+          <ChevronLeft size={16} /> Settings
+        </button>
+        <div className="flex items-center justify-between mb-4 px-1">
+          <div className="text-2xl font-bold">Exerciții</div>
+          <button onClick={openAddExercise} className="text-xs font-semibold" style={{ color: C.accent }}>
+            + Adaugă
+          </button>
+        </div>
+        <div className="space-y-4">
+          {grouped.map((g) => (
+            <div key={g.group}>
+              <div className="text-xs font-medium mb-1.5 px-1" style={{ color: C.sub2 }}>
+                {g.group}
+              </div>
+              <Card style={{ padding: 4 }}>
+                {g.items.map((e, i) => (
+                  <div
+                    key={e.id}
+                    className="flex items-center justify-between px-3.5 py-2.5"
+                    style={{ borderTop: i > 0 ? `1px solid ${C.border}` : "none" }}
+                  >
+                    <button className="text-left flex-1" onClick={() => openEditExercise(e)}>
+                      <span className="text-sm">{e.name}</span>
+                    </button>
+                    <button onClick={() => openEditExercise(e)} className="p-1.5 active:scale-90 transition">
+                      <Pencil size={14} color={C.sub2} />
+                    </button>
+                    <button onClick={() => setConfirmDelEx(e)} className="p-1.5 active:scale-90 transition">
+                      <Trash2 size={14} color={C.sub2} />
+                    </button>
+                  </div>
+                ))}
+              </Card>
+            </div>
+          ))}
+          {grouped.length === 0 && (
+            <div className="text-sm text-center py-6" style={{ color: C.sub2 }}>
+              Niciun exercițiu
+            </div>
+          )}
+        </div>
+
+        <BottomSheet
+          open={exSheetOpen}
+          onClose={() => {
+            setExSheetOpen(false);
+            setEditingEx(null);
+          }}
+          title={editingEx ? "Editează exercițiu" : "Exercițiu nou"}
+        >
+          <div className="space-y-3 pb-2">
+            <div>
+              <div className="text-xs font-medium mb-1.5" style={{ color: C.sub2 }}>
+                Nume
+              </div>
+              <input
+                value={newExName}
+                onChange={(e) => setNewExName(e.target.value)}
+                placeholder="ex: Cable Crossover"
+                className="w-full rounded-xl px-3.5 py-3 text-sm outline-none"
+                style={{ background: C.surface2, color: C.text, border: `1px solid ${C.border}` }}
+              />
+            </div>
+            <div>
+              <div className="text-xs font-medium mb-1.5" style={{ color: C.sub2 }}>
+                Grupă musculară
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {GROUP_ORDER.map((g) => (
+                  <Chip key={g} active={newExGroup === g} onClick={() => setNewExGroup(g)}>
+                    {g}
+                  </Chip>
+                ))}
+              </div>
+            </div>
+            <PrimaryButton onClick={saveExercise} disabled={!newExName.trim()}>
+              Salvează
+            </PrimaryButton>
+          </div>
+        </BottomSheet>
+
+        <ConfirmDialog
+          open={!!confirmDelEx}
+          title="Ștergi exercițiul?"
+          message={confirmDelEx ? `"${confirmDelEx.name}" va fi eliminat din toate planurile.` : ""}
+          onCancel={() => setConfirmDelEx(null)}
+          onConfirm={() => deleteExercise(confirmDelEx.id)}
+        />
+      </div>
+    );
+  }
+
+  /* ---------------- MAIN SETTINGS SCREEN ---------------- */
   return (
     <div className="px-4 pt-5 pb-4">
       <div className="text-2xl font-bold mb-5 px-1">Settings</div>
@@ -2078,71 +2313,39 @@ function SettingsView({
         )}
       </Card>
 
-      {/* Day templates */}
-      <div className="flex items-center justify-between mb-2 px-1">
-        <SectionLabel>Planuri antrenament</SectionLabel>
-        <button onClick={() => setAddPlanOpen(true)} className="text-xs font-semibold mb-2" style={{ color: C.accent }}>
-          + Adaugă plan
-        </button>
-      </div>
+      {/* Day templates - link to sub-screen */}
+      <SectionLabel>Planuri antrenament</SectionLabel>
       <Card style={{ padding: 4 }} className="mb-6">
-        {planNames.map((d, i) => (
-          <div
-            key={d}
-            className="w-full flex items-center justify-between px-3.5 py-3"
-            style={{ borderTop: i > 0 ? `1px solid ${C.border}` : "none" }}
-          >
-            <button className="text-left flex-1" onClick={() => setTemplateEditor(d)}>
-              <div className="text-sm font-semibold">{d}</div>
-              <div className="text-xs" style={{ color: C.sub2 }}>
-                {templates[d]?.length || 0} exerciții
-              </div>
-            </button>
-            <button onClick={() => setTemplateEditor(d)} className="p-1.5 active:scale-90 transition">
-              <ChevronRight size={16} color={C.sub2} />
-            </button>
-            <button onClick={() => setConfirmDelPlan(d)} className="p-1.5 active:scale-90 transition">
-              <Trash2 size={14} color={C.sub2} />
-            </button>
+        <button
+          onClick={() => setScreen("plans")}
+          className="w-full flex items-center justify-between px-3.5 py-3 transition active:scale-95"
+        >
+          <div className="text-left">
+            <div className="text-sm font-semibold">Vezi toate planurile</div>
+            <div className="text-xs" style={{ color: C.sub2 }}>
+              {planNames.length} planuri
+            </div>
           </div>
-        ))}
-        {planNames.length === 0 && (
-          <div className="text-sm text-center py-6" style={{ color: C.sub2 }}>
-            Niciun plan creat
-          </div>
-        )}
+          <ChevronRight size={16} color={C.sub2} />
+        </button>
       </Card>
 
-      {/* Exercise list */}
-      <div className="flex items-center justify-between mb-2 px-1">
-        <SectionLabel>Exerciții</SectionLabel>
-        <button onClick={() => setAddExOpen(true)} className="text-xs font-semibold mb-2" style={{ color: C.accent }}>
-          + Adaugă
-        </button>
-      </div>
-      <div className="space-y-4 mb-6">
-        {grouped.map((g) => (
-          <div key={g.group}>
-            <div className="text-xs font-medium mb-1.5 px-1" style={{ color: C.sub2 }}>
-              {g.group}
+      {/* Exercise list - link to sub-screen */}
+      <SectionLabel>Exerciții</SectionLabel>
+      <Card style={{ padding: 4 }} className="mb-6">
+        <button
+          onClick={() => setScreen("exercises")}
+          className="w-full flex items-center justify-between px-3.5 py-3 transition active:scale-95"
+        >
+          <div className="text-left">
+            <div className="text-sm font-semibold">Vezi toate exercițiile</div>
+            <div className="text-xs" style={{ color: C.sub2 }}>
+              {exercises.length} exerciții
             </div>
-            <Card style={{ padding: 4 }}>
-              {g.items.map((e, i) => (
-                <div
-                  key={e.id}
-                  className="flex items-center justify-between px-3.5 py-2.5"
-                  style={{ borderTop: i > 0 ? `1px solid ${C.border}` : "none" }}
-                >
-                  <span className="text-sm">{e.name}</span>
-                  <button onClick={() => setConfirmDelEx(e)} className="p-1 active:scale-90 transition">
-                    <Trash2 size={14} color={C.sub2} />
-                  </button>
-                </div>
-              ))}
-            </Card>
           </div>
-        ))}
-      </div>
+          <ChevronRight size={16} color={C.sub2} />
+        </button>
+      </Card>
 
       <button
         onClick={() => setConfirmReset(true)}
@@ -2151,78 +2354,6 @@ function SettingsView({
       >
         Resetează toate datele
       </button>
-
-      {/* Template editor sheet */}
-      <BottomSheet open={!!templateEditor} onClose={() => setTemplateEditor(null)} title={templateEditor}>
-        <div className="space-y-4 pb-4">
-          {GROUP_ORDER.map((g) => {
-            const items = exercises.filter((e) => e.group === g);
-            if (items.length === 0) return null;
-            return (
-              <div key={g}>
-                <div className="text-xs font-medium mb-1.5" style={{ color: C.sub2 }}>
-                  {g}
-                </div>
-                <div className="space-y-1.5">
-                  {items.map((e) => {
-                    const checked = templates[templateEditor]?.includes(e.id);
-                    return (
-                      <button
-                        key={e.id}
-                        onClick={() =>
-                          setTemplates((prev) => {
-                            const cur = prev[templateEditor] || [];
-                            const next = checked ? cur.filter((x) => x !== e.id) : [...cur, e.id];
-                            return { ...prev, [templateEditor]: next };
-                          })
-                        }
-                        className="w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 transition active:scale-95"
-                        style={{ background: checked ? C.accentSoft : C.surface2 }}
-                      >
-                        <span className="text-sm font-medium">{e.name}</span>
-                        {checked && <Check size={16} color={C.accent} />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </BottomSheet>
-
-      {/* Add exercise sheet */}
-      <BottomSheet open={addExOpen} onClose={() => setAddExOpen(false)} title="Exercițiu nou">
-        <div className="space-y-3 pb-2">
-          <div>
-            <div className="text-xs font-medium mb-1.5" style={{ color: C.sub2 }}>
-              Nume
-            </div>
-            <input
-              value={newExName}
-              onChange={(e) => setNewExName(e.target.value)}
-              placeholder="ex: Cable Crossover"
-              className="w-full rounded-xl px-3.5 py-3 text-sm outline-none"
-              style={{ background: C.surface2, color: C.text, border: `1px solid ${C.border}` }}
-            />
-          </div>
-          <div>
-            <div className="text-xs font-medium mb-1.5" style={{ color: C.sub2 }}>
-              Grupă musculară
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {GROUP_ORDER.map((g) => (
-                <Chip key={g} active={newExGroup === g} onClick={() => setNewExGroup(g)}>
-                  {g}
-                </Chip>
-              ))}
-            </div>
-          </div>
-          <PrimaryButton onClick={addExercise} disabled={!newExName.trim()}>
-            Salvează
-          </PrimaryButton>
-        </div>
-      </BottomSheet>
 
       {/* Add/edit bodyweight sheet */}
       <BottomSheet
@@ -2265,47 +2396,6 @@ function SettingsView({
         confirmLabel="Resetează"
         onCancel={() => setConfirmReset(false)}
         onConfirm={resetAll}
-      />
-
-      <ConfirmDialog
-        open={!!confirmDelEx}
-        title="Ștergi exercițiul?"
-        message={confirmDelEx ? `"${confirmDelEx.name}" va fi eliminat din toate planurile.` : ""}
-        onCancel={() => setConfirmDelEx(null)}
-        onConfirm={() => deleteExercise(confirmDelEx.id)}
-      />
-
-      <BottomSheet open={addPlanOpen} onClose={() => setAddPlanOpen(false)} title="Plan nou">
-        <div className="space-y-3 pb-2">
-          <div>
-            <div className="text-xs font-medium mb-1.5" style={{ color: C.sub2 }}>
-              Nume plan
-            </div>
-            <input
-              value={newPlanName}
-              onChange={(e) => setNewPlanName(e.target.value)}
-              placeholder="ex: Full Body"
-              className="w-full rounded-xl px-3.5 py-3 text-sm outline-none"
-              style={{ background: C.surface2, color: C.text, border: `1px solid ${C.border}` }}
-            />
-          </div>
-          <PrimaryButton onClick={addPlan} disabled={!newPlanName.trim() || !!templates[newPlanName.trim()]}>
-            Salvează
-          </PrimaryButton>
-          {newPlanName.trim() && templates[newPlanName.trim()] && (
-            <div className="text-xs text-center" style={{ color: C.danger }}>
-              Există deja un plan cu acest nume.
-            </div>
-          )}
-        </div>
-      </BottomSheet>
-
-      <ConfirmDialog
-        open={!!confirmDelPlan}
-        title="Ștergi planul?"
-        message={confirmDelPlan ? `Planul "${confirmDelPlan}" va fi eliminat. Antrenamentele deja salvate rămân neschimbate.` : ""}
-        onCancel={() => setConfirmDelPlan(null)}
-        onConfirm={() => deletePlan(confirmDelPlan)}
       />
     </div>
   );
