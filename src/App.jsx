@@ -18,6 +18,18 @@ import {
   Pencil,
   Flame,
   Scale,
+  ChevronsUp,
+  ChevronsDown,
+  ArrowUp,
+  ArrowDown,
+  PersonStanding,
+  Shield,
+  Bone,
+  MoveHorizontal,
+  Zap,
+  Footprints,
+  Activity,
+  Grid3X3,
 } from "lucide-react";
 import {
   LineChart,
@@ -148,6 +160,56 @@ const GROUP_ORDER = [
   "Fesieri",
   "Abdomen",
 ];
+
+/* ------------------------------------------------------------------ */
+/* ICON MAPPING (muscle groups + day types)                            */
+/* ------------------------------------------------------------------ */
+const GROUP_ICONS = {
+  Piept: Shield,
+  Spate: Bone,
+  Umeri: MoveHorizontal,
+  Biceps: Dumbbell,
+  Triceps: Zap,
+  Cvadricepși: PersonStanding,
+  Femurali: Footprints,
+  Fesieri: Activity,
+  Abdomen: Grid3X3,
+};
+
+const DAY_TYPE_ICONS = {
+  Push: ChevronsUp,
+  Pull: ChevronsDown,
+  Legs: PersonStanding,
+  Upper: ArrowUp,
+  Lower: ArrowDown,
+};
+
+function groupIcon(group) {
+  return GROUP_ICONS[group] || Dumbbell;
+}
+// Day types can be renamed/created by the user, so fall back to a heuristic
+// then to a generic dumbbell so every plan still shows a coherent icon.
+function dayTypeIcon(dayType) {
+  if (DAY_TYPE_ICONS[dayType]) return DAY_TYPE_ICONS[dayType];
+  const t = (dayType || "").toLowerCase();
+  if (t.includes("push")) return ChevronsUp;
+  if (t.includes("pull")) return ChevronsDown;
+  if (t.includes("leg") || t.includes("lower") || t.includes("picioare")) return PersonStanding;
+  if (t.includes("upper")) return ArrowUp;
+  return Dumbbell;
+}
+
+// Small rounded badge holding a lucide icon, matching the app's lime accent.
+function IconBadge({ icon: Icon, size = 30, iconSize = 16, muted = false }) {
+  return (
+    <span
+      className="flex items-center justify-center rounded-xl shrink-0"
+      style={{ width: size, height: size, background: muted ? "#26262A" : "rgba(198,255,61,0.14)" }}
+    >
+      <Icon size={iconSize} color={muted ? "#9C9CA3" : "#C6FF3D"} strokeWidth={2.2} />
+    </span>
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /* HELPERS                                                             */
@@ -898,9 +960,10 @@ export default function App() {
               <button
                 key={d}
                 onClick={() => startWorkout(d, false)}
-                className="rounded-2xl py-5 font-semibold text-base transition active:scale-95"
+                className="rounded-2xl py-5 font-semibold text-base transition active:scale-95 flex flex-col items-center gap-2"
                 style={{ background: C.surface2, border: `1px solid ${C.border}`, color: C.text }}
               >
+                <IconBadge icon={dayTypeIcon(d)} size={40} iconSize={20} />
                 {d}
               </button>
             ))}
@@ -1025,10 +1088,13 @@ function HomeView({ weekCount, goal, monthCount, lastWorkout, exById, currentBod
         </div>
         {lastWorkout ? (
           <div className="flex items-center justify-between">
-            <div>
-              <div className="text-lg font-semibold">{lastWorkout.dayType}</div>
-              <div className="text-sm" style={{ color: C.sub2 }}>
-                {formatDate(lastWorkout.date)} · {lastWorkout.exercises.length} exerciții
+            <div className="flex items-center gap-3">
+              <IconBadge icon={dayTypeIcon(lastWorkout.dayType)} size={40} iconSize={20} />
+              <div>
+                <div className="text-lg font-semibold">{lastWorkout.dayType}</div>
+                <div className="text-sm" style={{ color: C.sub2 }}>
+                  {formatDate(lastWorkout.date)} · {lastWorkout.exercises.length} exerciții
+                </div>
               </div>
             </div>
             <div className="text-sm font-semibold" style={{ color: C.accent }}>
@@ -1235,7 +1301,8 @@ function WorkoutBuilder({
   return (
     <div className="px-4 pt-5">
       <div className="flex items-center justify-between mb-1 px-1">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
+          <IconBadge icon={dayTypeIcon(activeWorkout.dayType)} size={34} iconSize={18} />
           <div className="text-2xl font-bold">{activeWorkout.dayType}</div>
           {activeWorkout.editingId && (
             <span className="text-xs font-semibold rounded-full px-2 py-0.5" style={{ background: C.accentSoft, color: C.accent }}>
@@ -1320,10 +1387,13 @@ function WorkoutBuilder({
               className="w-full flex items-center justify-between rounded-xl px-3.5 py-3 transition active:scale-95"
               style={{ background: C.surface2 }}
             >
-              <div className="text-left">
-                <div className="text-sm font-medium">{e.name}</div>
-                <div className="text-xs" style={{ color: C.sub2 }}>
-                  {e.group}
+              <div className="flex items-center gap-3 text-left">
+                <IconBadge icon={groupIcon(e.group)} muted />
+                <div>
+                  <div className="text-sm font-medium">{e.name}</div>
+                  <div className="text-xs" style={{ color: C.sub2 }}>
+                    {e.group}
+                  </div>
                 </div>
               </div>
               <Plus size={16} color={C.accent} />
@@ -1379,20 +1449,23 @@ function ExerciseLogCard({ exercise, sets, workouts, onChange, onCopyLast, onRem
       }}
     >
       <div className="flex items-start justify-between mb-1">
-        <button className="text-left flex-1" onClick={() => setOpen((o) => !o)}>
-          <div className="flex items-center gap-1.5">
-            <div className="font-semibold text-base">{exercise.name}</div>
-            {hasFilled && (
-              <span
-                className="rounded-full flex items-center justify-center shrink-0 v0-pop"
-                style={{ width: 16, height: 16, background: C.accent }}
-              >
-                <Check size={10} color="#0A0A0B" strokeWidth={3} />
-              </span>
-            )}
-          </div>
-          <div className="text-xs" style={{ color: C.sub2 }}>
-            {exercise.group}
+        <button className="text-left flex-1 flex items-center gap-3" onClick={() => setOpen((o) => !o)}>
+          <IconBadge icon={groupIcon(exercise.group)} size={38} iconSize={19} />
+          <div>
+            <div className="flex items-center gap-1.5">
+              <div className="font-semibold text-base">{exercise.name}</div>
+              {hasFilled && (
+                <span
+                  className="rounded-full flex items-center justify-center shrink-0 v0-pop"
+                  style={{ width: 16, height: 16, background: C.accent }}
+                >
+                  <Check size={10} color="#0A0A0B" strokeWidth={3} />
+                </span>
+              )}
+            </div>
+            <div className="text-xs" style={{ color: C.sub2 }}>
+              {exercise.group}
+            </div>
           </div>
         </button>
         <button onClick={onRemove} className="p-1 -mt-1 -mr-1 active:scale-90 transition">
@@ -1591,7 +1664,10 @@ function ProgressView({ exercises, workouts, onSelect }) {
                         borderTop: i > 0 ? `1px solid ${C.border}` : "none",
                       }}
                     >
-                      <span className="text-sm font-medium text-left">{e.name}</span>
+                      <span className="flex items-center gap-3 text-left">
+                        <IconBadge icon={groupIcon(e.group)} muted />
+                        <span className="text-sm font-medium">{e.name}</span>
+                      </span>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <span className="text-xs" style={{ color: C.sub2 }}>
                           {rec ? `PR ${rec.maxWeight} kg` : "—"}
@@ -1610,7 +1686,10 @@ function ProgressView({ exercises, workouts, onSelect }) {
           {recordsList.map(({ ex, rec }) => (
             <Card key={ex.id} style={{ padding: 14 }} onClick={() => onSelect(ex.id)} className="active:scale-95 transition">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-semibold">{ex.name}</span>
+                <span className="flex items-center gap-2.5">
+                  <IconBadge icon={groupIcon(ex.group)} size={26} iconSize={14} />
+                  <span className="text-sm font-semibold">{ex.name}</span>
+                </span>
                 <ChevronRight size={15} color={C.sub2} />
               </div>
               <div className="flex gap-4">
@@ -1824,16 +1903,19 @@ function HistoryView({ workouts, exById, onSelect, onAddPast }) {
             className="transition active:scale-95"
           >
             <div className="flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-base">{w.dayType}</div>
-                <div className="text-xs mt-0.5" style={{ color: C.sub2 }}>
-                  {formatDate(w.date)} · {w.exercises.length} exerciții
-                </div>
-                {w.notes && (
-                  <div className="text-xs mt-1 truncate" style={{ color: C.sub, maxWidth: 220 }}>
-                    "{w.notes}"
+              <div className="flex items-center gap-3">
+                <IconBadge icon={dayTypeIcon(w.dayType)} size={38} iconSize={19} />
+                <div>
+                  <div className="font-semibold text-base">{w.dayType}</div>
+                  <div className="text-xs mt-0.5" style={{ color: C.sub2 }}>
+                    {formatDate(w.date)} · {w.exercises.length} exerciții
                   </div>
-                )}
+                  {w.notes && (
+                    <div className="text-xs mt-1 truncate" style={{ color: C.sub, maxWidth: 220 }}>
+                      "{w.notes}"
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-sm font-semibold" style={{ color: C.accent }}>
@@ -2057,10 +2139,13 @@ function SettingsView({
               className="w-full flex items-center justify-between px-3.5 py-3"
               style={{ borderTop: i > 0 ? `1px solid ${C.border}` : "none" }}
             >
-              <button className="text-left flex-1" onClick={() => setTemplateEditor(d)}>
-                <div className="text-sm font-semibold">{d}</div>
-                <div className="text-xs" style={{ color: C.sub2 }}>
-                  {templates[d]?.length || 0} exerciții
+              <button className="text-left flex-1 flex items-center gap-3" onClick={() => setTemplateEditor(d)}>
+                <IconBadge icon={dayTypeIcon(d)} />
+                <div>
+                  <div className="text-sm font-semibold">{d}</div>
+                  <div className="text-xs" style={{ color: C.sub2 }}>
+                    {templates[d]?.length || 0} exerciții
+                  </div>
                 </div>
               </button>
               <button onClick={() => setTemplateEditor(d)} className="p-1.5 active:scale-90 transition">
@@ -2178,7 +2263,8 @@ function SettingsView({
                     className="flex items-center justify-between px-3.5 py-2.5"
                     style={{ borderTop: i > 0 ? `1px solid ${C.border}` : "none" }}
                   >
-                    <button className="text-left flex-1" onClick={() => openEditExercise(e)}>
+                    <button className="text-left flex-1 flex items-center gap-3" onClick={() => openEditExercise(e)}>
+                      <IconBadge icon={groupIcon(e.group)} muted size={26} iconSize={14} />
                       <span className="text-sm">{e.name}</span>
                     </button>
                     <button onClick={() => openEditExercise(e)} className="p-1.5 active:scale-90 transition">
@@ -2205,7 +2291,7 @@ function SettingsView({
             setExSheetOpen(false);
             setEditingEx(null);
           }}
-          title={editingEx ? "Editează exercițiu" : "Exercițiu nou"}
+          title={editingEx ? "Editează exercițiu" : "Exerci��iu nou"}
         >
           <div className="space-y-3 pb-2">
             <div>
