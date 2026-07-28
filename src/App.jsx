@@ -960,10 +960,9 @@ export default function App() {
               <button
                 key={d}
                 onClick={() => startWorkout(d, false)}
-                className="rounded-2xl py-5 font-semibold text-base transition active:scale-95 flex flex-col items-center gap-2"
+                className="rounded-2xl py-5 font-semibold text-base transition active:scale-95"
                 style={{ background: C.surface2, border: `1px solid ${C.border}`, color: C.text }}
               >
-                <IconBadge icon={dayTypeIcon(d)} size={40} iconSize={20} />
                 {d}
               </button>
             ))}
