@@ -17,6 +17,12 @@ import {
   Minus,
   Pencil,
   Flame,
+  Scale,
+  ChevronsUp,
+  ChevronsDown,
+  ArrowUp,
+  ArrowDown,
+  PersonStanding,
 } from "lucide-react";
 import {
   LineChart,
@@ -42,8 +48,8 @@ const C = {
   text: "#F5F5F7",
   sub: "#9C9CA3",
   sub2: "#6B6B70",
-  accent: "#C6FF3D",
-  accentSoft: "rgba(198,255,61,0.14)",
+  accent: "#3B82F6",
+  accentSoft: "rgba(59,130,246,0.15)",
   danger: "#FF453A",
   dangerSoft: "rgba(255,69,58,0.14)",
 };
@@ -147,6 +153,41 @@ const GROUP_ORDER = [
   "Fesieri",
   "Abdomen",
 ];
+
+/* ------------------------------------------------------------------ */
+/* ICON MAPPING (day types)                                           */
+/* ------------------------------------------------------------------ */
+const DAY_TYPE_ICONS = {
+  Push: ChevronsUp,
+  Pull: ChevronsDown,
+  Legs: PersonStanding,
+  Upper: ArrowUp,
+  Lower: ArrowDown,
+};
+
+// Day types can be renamed/created by the user, so fall back to a heuristic
+// then to a generic dumbbell so every plan still shows a coherent icon.
+function dayTypeIcon(dayType) {
+  if (DAY_TYPE_ICONS[dayType]) return DAY_TYPE_ICONS[dayType];
+  const t = (dayType || "").toLowerCase();
+  if (t.includes("push")) return ChevronsUp;
+  if (t.includes("pull")) return ChevronsDown;
+  if (t.includes("leg") || t.includes("lower") || t.includes("picioare")) return PersonStanding;
+  if (t.includes("upper")) return ArrowUp;
+  return Dumbbell;
+}
+
+// Small rounded badge holding a lucide icon, matching the app's blue accent.
+function IconBadge({ icon: Icon, size = 30, iconSize = 16, muted = false }) {
+  return (
+    <span
+      className="flex items-center justify-center rounded-xl shrink-0"
+      style={{ width: size, height: size, background: muted ? C.surface3 : C.accentSoft }}
+    >
+      <Icon size={iconSize} color={muted ? C.sub : C.accent} strokeWidth={2.2} />
+    </span>
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /* HELPERS                                                             */
@@ -254,6 +295,7 @@ function Card({ children, style, onClick, className = "" }) {
       style={{
         background: C.surface,
         border: `1px solid ${C.border}`,
+        boxShadow: "0 1px 2px rgba(0,0,0,0.4), 0 8px 24px -12px rgba(0,0,0,0.6)",
         ...style,
       }}
     >
@@ -270,8 +312,9 @@ function PrimaryButton({ children, onClick, style, disabled }) {
       className="w-full rounded-2xl py-4 font-semibold text-base transition active:scale-95"
       style={{
         background: disabled ? C.surface3 : C.accent,
-        color: disabled ? C.sub2 : "#0A0A0B",
+        color: disabled ? C.sub2 : "#FFFFFF",
         opacity: disabled ? 0.6 : 1,
+        boxShadow: disabled ? "none" : "0 6px 24px -6px rgba(59,130,246,0.45)",
         ...style,
       }}
     >
@@ -304,7 +347,7 @@ function Chip({ active, children, onClick }) {
       className="rounded-full px-3.5 py-1.5 text-xs font-medium shrink-0 transition active:scale-95"
       style={{
         background: active ? C.accent : C.surface2,
-        color: active ? "#0A0A0B" : C.sub,
+        color: active ? "#FFFFFF" : C.sub,
         border: `1px solid ${active ? C.accent : C.border}`,
       }}
     >
@@ -440,22 +483,36 @@ function ActivityRing({ progress, size = 84, stroke = 10 }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const pct = Math.min(1, progress);
+  const percentLabel = Math.round(pct * 100);
   return (
-    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={C.surface3} strokeWidth={stroke} />
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={r}
-        fill="none"
-        stroke={C.accent}
-        strokeWidth={stroke}
-        strokeDasharray={c}
-        strokeDashoffset={c * (1 - pct)}
-        strokeLinecap="round"
-        style={{ transition: "stroke-dashoffset 0.6s ease" }}
-      />
-    </svg>
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={C.surface3} strokeWidth={stroke} />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={C.accent}
+          strokeWidth={stroke}
+          strokeDasharray={c}
+          strokeDashoffset={c * (1 - pct)}
+          strokeLinecap="round"
+          style={{ transition: "stroke-dashoffset 0.6s ease" }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span
+          className="font-bold leading-none"
+          style={{ fontSize: size * 0.28, color: percentLabel >= 100 ? C.accent : C.text }}
+        >
+          {percentLabel}
+        </span>
+        <span className="font-semibold leading-none" style={{ fontSize: size * 0.14, color: C.sub2, marginTop: 2 }}>
+          %
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -949,7 +1006,16 @@ function BottomNav({ tab, setTab }) {
             className="flex flex-col items-center gap-1 transition active:scale-90"
             style={{ minWidth: 56 }}
           >
-            <Icon size={22} color={active ? C.accent : C.sub2} strokeWidth={active ? 2.4 : 2} />
+            <span
+              className="flex items-center justify-center rounded-full transition-all"
+              style={{
+                width: 44,
+                height: 28,
+                background: active ? C.accentSoft : "transparent",
+              }}
+            >
+              <Icon size={22} color={active ? C.accent : C.sub2} strokeWidth={active ? 2.4 : 2} />
+            </span>
             <span className="text-xs font-medium" style={{ color: active ? C.accent : C.sub2 }}>
               {it.label}
             </span>
@@ -985,10 +1051,11 @@ function HomeView({ weekCount, goal, monthCount, lastWorkout, exById, currentBod
       </Card>
 
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <StatTile label="Workout-uri lunare" value={monthCount} onClick={onOpenCalendar} />
+        <StatTile label="Workout-uri lunare" value={monthCount} onClick={onOpenCalendar} icon={CalendarDays} />
         <StatTile
           label="Greutate corporală"
           value={currentBodyweight ? `${currentBodyweight.weight} kg` : "-"}
+          icon={Scale}
         />
       </div>
 
@@ -998,10 +1065,13 @@ function HomeView({ weekCount, goal, monthCount, lastWorkout, exById, currentBod
         </div>
         {lastWorkout ? (
           <div className="flex items-center justify-between">
-            <div>
-              <div className="text-lg font-semibold">{lastWorkout.dayType}</div>
-              <div className="text-sm" style={{ color: C.sub2 }}>
-                {formatDate(lastWorkout.date)} · {lastWorkout.exercises.length} exerciții
+            <div className="flex items-center gap-3">
+              <IconBadge icon={dayTypeIcon(lastWorkout.dayType)} size={40} iconSize={20} />
+              <div>
+                <div className="text-lg font-semibold">{lastWorkout.dayType}</div>
+                <div className="text-sm" style={{ color: C.sub2 }}>
+                  {formatDate(lastWorkout.date)} · {lastWorkout.exercises.length} exerciții
+                </div>
               </div>
             </div>
             <div className="text-sm font-semibold" style={{ color: C.accent }}>
@@ -1022,11 +1092,21 @@ function HomeView({ weekCount, goal, monthCount, lastWorkout, exById, currentBod
   );
 }
 
-function StatTile({ label, value, onClick }) {
+function StatTile({ label, value, onClick, icon: Icon }) {
   return (
     <Card style={{ padding: 16 }} onClick={onClick} className={onClick ? "active:scale-95 transition" : ""}>
-      <div className="text-xs font-medium mb-1.5" style={{ color: C.sub }}>
-        {label}
+      <div className="flex items-center gap-1.5 mb-1.5">
+        {Icon && (
+          <span
+            className="flex items-center justify-center rounded-lg shrink-0"
+            style={{ width: 22, height: 22, background: C.accentSoft }}
+          >
+            <Icon size={13} color={C.accent} strokeWidth={2.4} />
+          </span>
+        )}
+        <div className="text-xs font-medium" style={{ color: C.sub }}>
+          {label}
+        </div>
       </div>
       <div className="text-xl font-bold">{value}</div>
     </Card>
@@ -1122,11 +1202,11 @@ function CalendarView({ workouts, initialDate, onSelectWorkout, onClose }) {
                   border: isToday ? `2px solid ${C.accent}` : `1px solid ${C.border}`,
                 }}
               >
-                <span className="text-sm font-semibold" style={{ color: has ? "#0A0A0B" : C.text }}>
+                <span className="text-sm font-semibold" style={{ color: has ? "#FFFFFF" : C.text }}>
                   {day}
                 </span>
                 {has && dayWorkouts.length > 0 && (
-                  <span className="text-[9px] font-medium" style={{ color: "#0A0A0B", opacity: 0.7 }}>
+                  <span className="text-[9px] font-medium" style={{ color: "#FFFFFF", opacity: 0.8 }}>
                     {dayWorkouts[0].dayType.slice(0, 3)}
                   </span>
                 )}
@@ -1198,7 +1278,8 @@ function WorkoutBuilder({
   return (
     <div className="px-4 pt-5">
       <div className="flex items-center justify-between mb-1 px-1">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
+          <IconBadge icon={dayTypeIcon(activeWorkout.dayType)} size={34} iconSize={18} />
           <div className="text-2xl font-bold">{activeWorkout.dayType}</div>
           {activeWorkout.editingId && (
             <span className="text-xs font-semibold rounded-full px-2 py-0.5" style={{ background: C.accentSoft, color: C.accent }}>
@@ -1284,9 +1365,11 @@ function WorkoutBuilder({
               style={{ background: C.surface2 }}
             >
               <div className="text-left">
-                <div className="text-sm font-medium">{e.name}</div>
-                <div className="text-xs" style={{ color: C.sub2 }}>
-                  {e.group}
+                <div>
+                  <div className="text-sm font-medium">{e.name}</div>
+                  <div className="text-xs" style={{ color: C.sub2 }}>
+                    {e.group}
+                  </div>
                 </div>
               </div>
               <Plus size={16} color={C.accent} />
@@ -1336,26 +1419,28 @@ function ExerciseLogCard({ exercise, sets, workouts, onChange, onCopyLast, onRem
     <Card
       style={{
         padding: 16,
-        background: hasFilled ? "rgba(198,255,61,0.07)" : C.surface,
-        border: `1px solid ${hasFilled ? "rgba(198,255,61,0.35)" : C.border}`,
+        background: hasFilled ? "rgba(59,130,246,0.08)" : C.surface,
+        border: `1px solid ${hasFilled ? "rgba(59,130,246,0.40)" : C.border}`,
         transition: "background 0.25s ease, border-color 0.25s ease",
       }}
     >
       <div className="flex items-start justify-between mb-1">
         <button className="text-left flex-1" onClick={() => setOpen((o) => !o)}>
-          <div className="flex items-center gap-1.5">
-            <div className="font-semibold text-base">{exercise.name}</div>
-            {hasFilled && (
-              <span
-                className="rounded-full flex items-center justify-center shrink-0"
-                style={{ width: 16, height: 16, background: C.accent }}
-              >
-                <Check size={10} color="#0A0A0B" strokeWidth={3} />
-              </span>
-            )}
-          </div>
-          <div className="text-xs" style={{ color: C.sub2 }}>
-            {exercise.group}
+          <div>
+            <div className="flex items-center gap-1.5">
+              <div className="font-semibold text-base">{exercise.name}</div>
+              {hasFilled && (
+                <span
+                  className="rounded-full flex items-center justify-center shrink-0 v0-pop"
+                  style={{ width: 16, height: 16, background: C.accent }}
+                >
+                  <Check size={10} color="#FFFFFF" strokeWidth={3} />
+                </span>
+              )}
+            </div>
+            <div className="text-xs" style={{ color: C.sub2 }}>
+              {exercise.group}
+            </div>
           </div>
         </button>
         <button onClick={onRemove} className="p-1 -mt-1 -mr-1 active:scale-90 transition">
@@ -1640,8 +1725,8 @@ function ExerciseDetail({ exercise, workouts, onBack }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <StatTile label="Greutate maximă" value={rec ? `${rec.maxWeight} kg` : "-"} />
-        <StatTile label="Volum total" value={`${Math.round(totalVolume).toLocaleString()} kg`} />
+        <StatTile label="Greutate maximă" value={rec ? `${rec.maxWeight} kg` : "-"} icon={Dumbbell} />
+        <StatTile label="Volum total" value={`${Math.round(totalVolume).toLocaleString()} kg`} icon={TrendingUp} />
       </div>
 
       <div className="flex gap-2 mb-3 overflow-x-auto">
@@ -1787,16 +1872,19 @@ function HistoryView({ workouts, exById, onSelect, onAddPast }) {
             className="transition active:scale-95"
           >
             <div className="flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-base">{w.dayType}</div>
-                <div className="text-xs mt-0.5" style={{ color: C.sub2 }}>
-                  {formatDate(w.date)} · {w.exercises.length} exerciții
-                </div>
-                {w.notes && (
-                  <div className="text-xs mt-1 truncate" style={{ color: C.sub, maxWidth: 220 }}>
-                    "{w.notes}"
+              <div className="flex items-center gap-3">
+                <IconBadge icon={dayTypeIcon(w.dayType)} size={38} iconSize={19} />
+                <div>
+                  <div className="font-semibold text-base">{w.dayType}</div>
+                  <div className="text-xs mt-0.5" style={{ color: C.sub2 }}>
+                    {formatDate(w.date)} · {w.exercises.length} exerciții
                   </div>
-                )}
+                  {w.notes && (
+                    <div className="text-xs mt-1 truncate" style={{ color: C.sub, maxWidth: 220 }}>
+                      "{w.notes}"
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-sm font-semibold" style={{ color: C.accent }}>
@@ -2020,10 +2108,13 @@ function SettingsView({
               className="w-full flex items-center justify-between px-3.5 py-3"
               style={{ borderTop: i > 0 ? `1px solid ${C.border}` : "none" }}
             >
-              <button className="text-left flex-1" onClick={() => setTemplateEditor(d)}>
-                <div className="text-sm font-semibold">{d}</div>
-                <div className="text-xs" style={{ color: C.sub2 }}>
-                  {templates[d]?.length || 0} exerciții
+              <button className="text-left flex-1 flex items-center gap-3" onClick={() => setTemplateEditor(d)}>
+                <IconBadge icon={dayTypeIcon(d)} />
+                <div>
+                  <div className="text-sm font-semibold">{d}</div>
+                  <div className="text-xs" style={{ color: C.sub2 }}>
+                    {templates[d]?.length || 0} exerciții
+                  </div>
                 </div>
               </button>
               <button onClick={() => setTemplateEditor(d)} className="p-1.5 active:scale-90 transition">
@@ -2168,7 +2259,7 @@ function SettingsView({
             setExSheetOpen(false);
             setEditingEx(null);
           }}
-          title={editingEx ? "Editează exercițiu" : "Exercițiu nou"}
+          title={editingEx ? "Editează exercițiu" : "Exerci��iu nou"}
         >
           <div className="space-y-3 pb-2">
             <div>
