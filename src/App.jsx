@@ -48,8 +48,8 @@ const C = {
   text: "#F5F5F7",
   sub: "#9C9CA3",
   sub2: "#6B6B70",
-  accent: "#3B82F6",
-  accentSoft: "rgba(59,130,246,0.15)",
+  accent: "#D1D5DB",
+  accentSoft: "rgba(209,213,219,0.12)",
   danger: "#FF453A",
   dangerSoft: "rgba(255,69,58,0.14)",
 };
@@ -177,7 +177,7 @@ function dayTypeIcon(dayType) {
   return Dumbbell;
 }
 
-// Small rounded badge holding a lucide icon, matching the app's blue accent.
+// Small rounded badge holding a lucide icon, matching the app's silver accent.
 function IconBadge({ icon: Icon, size = 30, iconSize = 16, muted = false }) {
   return (
     <span
@@ -312,9 +312,9 @@ function PrimaryButton({ children, onClick, style, disabled }) {
       className="w-full rounded-2xl py-4 font-semibold text-base transition active:scale-95"
       style={{
         background: disabled ? C.surface3 : C.accent,
-        color: disabled ? C.sub2 : "#FFFFFF",
+        color: disabled ? C.sub2 : "#0A0A0B",
         opacity: disabled ? 0.6 : 1,
-        boxShadow: disabled ? "none" : "0 6px 24px -6px rgba(59,130,246,0.45)",
+        boxShadow: disabled ? "none" : "0 6px 24px -6px rgba(209,213,219,0.18)",
         ...style,
       }}
     >
@@ -347,7 +347,7 @@ function Chip({ active, children, onClick }) {
       className="rounded-full px-3.5 py-1.5 text-xs font-medium shrink-0 transition active:scale-95"
       style={{
         background: active ? C.accent : C.surface2,
-        color: active ? "#FFFFFF" : C.sub,
+        color: active ? "#0A0A0B" : C.sub,
         border: `1px solid ${active ? C.accent : C.border}`,
       }}
     >
@@ -1202,11 +1202,11 @@ function CalendarView({ workouts, initialDate, onSelectWorkout, onClose }) {
                   border: isToday ? `2px solid ${C.accent}` : `1px solid ${C.border}`,
                 }}
               >
-                <span className="text-sm font-semibold" style={{ color: has ? "#FFFFFF" : C.text }}>
+                <span className="text-sm font-semibold" style={{ color: has ? "#0A0A0B" : C.text }}>
                   {day}
                 </span>
                 {has && dayWorkouts.length > 0 && (
-                  <span className="text-[9px] font-medium" style={{ color: "#FFFFFF", opacity: 0.8 }}>
+                  <span className="text-[9px] font-medium" style={{ color: "#0A0A0B", opacity: 0.72 }}>
                     {dayWorkouts[0].dayType.slice(0, 3)}
                   </span>
                 )}
@@ -1419,8 +1419,8 @@ function ExerciseLogCard({ exercise, sets, workouts, onChange, onCopyLast, onRem
     <Card
       style={{
         padding: 16,
-        background: hasFilled ? "rgba(59,130,246,0.08)" : C.surface,
-        border: `1px solid ${hasFilled ? "rgba(59,130,246,0.40)" : C.border}`,
+        background: hasFilled ? "rgba(209,213,219,0.06)" : C.surface,
+        border: `1px solid ${hasFilled ? "rgba(209,213,219,0.32)" : C.border}`,
         transition: "background 0.25s ease, border-color 0.25s ease",
       }}
     >
@@ -1434,7 +1434,7 @@ function ExerciseLogCard({ exercise, sets, workouts, onChange, onCopyLast, onRem
                   className="rounded-full flex items-center justify-center shrink-0 v0-pop"
                   style={{ width: 16, height: 16, background: C.accent }}
                 >
-                  <Check size={10} color="#FFFFFF" strokeWidth={3} />
+                  <Check size={10} color="#0A0A0B" strokeWidth={3} />
                 </span>
               )}
             </div>
