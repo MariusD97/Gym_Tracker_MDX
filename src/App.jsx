@@ -23,13 +23,6 @@ import {
   ArrowUp,
   ArrowDown,
   PersonStanding,
-  Shield,
-  Bone,
-  MoveHorizontal,
-  Zap,
-  Footprints,
-  Activity,
-  Grid3X3,
 } from "lucide-react";
 import {
   LineChart,
@@ -162,20 +155,8 @@ const GROUP_ORDER = [
 ];
 
 /* ------------------------------------------------------------------ */
-/* ICON MAPPING (muscle groups + day types)                            */
+/* ICON MAPPING (day types)                                           */
 /* ------------------------------------------------------------------ */
-const GROUP_ICONS = {
-  Piept: Shield,
-  Spate: Bone,
-  Umeri: MoveHorizontal,
-  Biceps: Dumbbell,
-  Triceps: Zap,
-  Cvadricepși: PersonStanding,
-  Femurali: Footprints,
-  Fesieri: Activity,
-  Abdomen: Grid3X3,
-};
-
 const DAY_TYPE_ICONS = {
   Push: ChevronsUp,
   Pull: ChevronsDown,
@@ -184,9 +165,6 @@ const DAY_TYPE_ICONS = {
   Lower: ArrowDown,
 };
 
-function groupIcon(group) {
-  return GROUP_ICONS[group] || Dumbbell;
-}
 // Day types can be renamed/created by the user, so fall back to a heuristic
 // then to a generic dumbbell so every plan still shows a coherent icon.
 function dayTypeIcon(dayType) {
@@ -1386,8 +1364,7 @@ function WorkoutBuilder({
               className="w-full flex items-center justify-between rounded-xl px-3.5 py-3 transition active:scale-95"
               style={{ background: C.surface2 }}
             >
-              <div className="flex items-center gap-3 text-left">
-                <IconBadge icon={groupIcon(e.group)} muted />
+              <div className="text-left">
                 <div>
                   <div className="text-sm font-medium">{e.name}</div>
                   <div className="text-xs" style={{ color: C.sub2 }}>
@@ -1448,8 +1425,7 @@ function ExerciseLogCard({ exercise, sets, workouts, onChange, onCopyLast, onRem
       }}
     >
       <div className="flex items-start justify-between mb-1">
-        <button className="text-left flex-1 flex items-center gap-3" onClick={() => setOpen((o) => !o)}>
-          <IconBadge icon={groupIcon(exercise.group)} size={38} iconSize={19} />
+        <button className="text-left flex-1" onClick={() => setOpen((o) => !o)}>
           <div>
             <div className="flex items-center gap-1.5">
               <div className="font-semibold text-base">{exercise.name}</div>
@@ -1663,10 +1639,7 @@ function ProgressView({ exercises, workouts, onSelect }) {
                         borderTop: i > 0 ? `1px solid ${C.border}` : "none",
                       }}
                     >
-                      <span className="flex items-center gap-3 text-left">
-                        <IconBadge icon={groupIcon(e.group)} muted />
-                        <span className="text-sm font-medium">{e.name}</span>
-                      </span>
+                      <span className="text-sm font-medium text-left">{e.name}</span>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <span className="text-xs" style={{ color: C.sub2 }}>
                           {rec ? `PR ${rec.maxWeight} kg` : "—"}
@@ -1685,10 +1658,7 @@ function ProgressView({ exercises, workouts, onSelect }) {
           {recordsList.map(({ ex, rec }) => (
             <Card key={ex.id} style={{ padding: 14 }} onClick={() => onSelect(ex.id)} className="active:scale-95 transition">
               <div className="flex items-center justify-between mb-2">
-                <span className="flex items-center gap-2.5">
-                  <IconBadge icon={groupIcon(ex.group)} size={26} iconSize={14} />
-                  <span className="text-sm font-semibold">{ex.name}</span>
-                </span>
+                <span className="text-sm font-semibold">{ex.name}</span>
                 <ChevronRight size={15} color={C.sub2} />
               </div>
               <div className="flex gap-4">
@@ -2262,8 +2232,7 @@ function SettingsView({
                     className="flex items-center justify-between px-3.5 py-2.5"
                     style={{ borderTop: i > 0 ? `1px solid ${C.border}` : "none" }}
                   >
-                    <button className="text-left flex-1 flex items-center gap-3" onClick={() => openEditExercise(e)}>
-                      <IconBadge icon={groupIcon(e.group)} muted size={26} iconSize={14} />
+                    <button className="text-left flex-1" onClick={() => openEditExercise(e)}>
                       <span className="text-sm">{e.name}</span>
                     </button>
                     <button onClick={() => openEditExercise(e)} className="p-1.5 active:scale-90 transition">
